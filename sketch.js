@@ -46,6 +46,7 @@ function setup(){
     createCanvas(600,200);
     trex = createSprite(50,160,20,50);
     trex.addAnimation("running",trexImg);
+    trex.addAnimation("collided",trexCollided);
     trex.scale = 0.5;
     trex.x = 50;
 
@@ -58,35 +59,60 @@ function setup(){
 
     obstaclesGroup = new Group();
 
-    gameOver = createSprite(width / 2,height / 2);
+    gameOver = createSprite(width / 2,80);
     gameOver.addImage(gameOverImg);
     gameOver.scale = 0.5;
+
+    restart = createSprite(width / 2,110);
+    restart.addImage(restartImg);
+    restart.scale = 0.5
+
+    //trex.debug = true;
+    trex.setCollider("circle",0,0,40)
 }
 
 function draw(){
     background("white");
 
-    trex.collide(invisibleGround);
-    ground.velocityX = -2;
-    if(ground.x < 0){
-        ground.x = ground.width / 2
+    text("pontuaçao: " + score,500,50);
+
+    if(gameState === PLAY){
+        ground.velocityX = -4;
+        score = score + Math.round(frameCount / 60);
+        if(score > 0 && score % 1000 == 0){
+            CheckpointSound.play();
+        }
+        if(ground.x < 0){
+            ground.x = ground.width / 2
+        }
+        if(keyDown("space") && trex.y >= 100){
+            trex.velocityY = -10;
+            jumpSound.play();
+        }
+        trex.velocityY = trex.velocityY + 0.8;
+        spawnClouds();
+        spawnObstacles();
+        if(obstaclesGroup.isTouching(trex)){
+            gameState = END;
+            dieSound.play();
+        }
+        gameOver.visible = false;
+        restart.visible = false;
     }
-
-    if(keyDown("space") && trex.y >= 100){
-        trex.velocityY = -10;
-    }
-
-    trex.velocityY = trex.velocityY + 0.8;
-
-    spawnClouds();
-    spawnObstacles();
-
-    if(obstaclesGroup.isTouching(trex)){
+    else if(gameState === END){
+        gameOver.visible = true;
+        restart.visible = true;
         ground.velocityX = 0;
-        cloudsGroup.setVelocityXEach(0);
+        obstaclesGroup.setLifetimeEach(-1);
+        cloudsGroup.setLifetimeEach(-1);
         obstaclesGroup.setVelocityXEach(0);
+        cloudsGroup.setVelocityXEach(0);
         trex.velocityY = 0;
+        trex.changeAnimation("collided",trexCollided);
     }
+
+    trex.collide(invisibleGround);
+
     drawSprites();
 }
 
@@ -133,7 +159,7 @@ function spawnObstacles(){
 
         }
         obstacle.scale = 0.5;
-        obstacle.velocityX = -2;
+        obstacle.velocityX = -(4 + 3 * score / 200);
         obstacle.lifetime = width / 2
         obstaclesGroup.add(obstacle);
 
